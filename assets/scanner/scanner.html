@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: black;
+}
+
+video {
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+
+#result {
+
+  position: absolute;
+
+  top: 20px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  color: white;
+
+  background: rgba(0,0,0,0.5);
+
+  padding: 10px;
+
+  border-radius: 8px;
+
+  z-index: 9999;
+
+  font-size: 18px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="result">
+  Waiting...
+</div>
+
+<video id="video"></video>
+
+<script src="assets/packages/c_barcodeweb/assets/scanner/zxing.min.js"></script>
+
+<script>
+
+let codeReader = null;
+
+let scanned = false;
+
+window.addEventListener(
+    "message",
+    (event) => {
+
+    try {
+
+        const data =
+            typeof event.data === 'string'
+            ? JSON.parse(event.data)
+            : event.data;
+
+        if (data.type === "start") {
+            startScanner();
+        }
+
+        if (data.type === "stop") {
+            stopScanner();
+        }
+
+    } catch(e) {
+        console.log(e);
+    }
+});
+
+function startScanner() {
+
+    scanned = false;
+
+    document
+        .getElementById("result")
+        .innerText = "Scanning...";
+
+    if (!codeReader) {
+
+        codeReader =
+            new ZXing.BrowserBarcodeReader();
+    }
+
+    const constraints = {
+
+        video: {
+
+            facingMode: "environment",
+
+            width: {
+                ideal: 1920
+            },
+
+            height: {
+                ideal: 1080
+            }
+        }
+    };
+
+    codeReader.decodeFromConstraints(
+
+        constraints,
+
+        "video",
+
+        (result, err) => {
+
+            if (result && !scanned) {
+
+                scanned = true;
+
+                console.log(
+                    "SCANNED:",
+                    result.text
+                );
+
+                document
+                    .getElementById("result")
+                    .innerText = result.text;
+
+                parent.postMessage(
+                    JSON.stringify({
+                        type: 'scan',
+                        value: result.text
+                    }),
+                    '*'
+                );
+
+                //stopScanner();
+            }
+        }
+    );
+}
+
+function stopScanner() {
+
+    if (codeReader) {
+        codeReader.reset();
+    }
+}
+
+startScanner();
+
+</script>
+
+</body>
+</html>
